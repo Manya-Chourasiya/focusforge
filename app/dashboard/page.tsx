@@ -5,11 +5,20 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+interface ScheduleItem {
+  time: string;
+  task: string;
+  duration: string;
+  tip: string;
+}
+
 export default function Dashboard() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [tasks, setTasks] = useState<string[]>([]);
   const [input, setInput] = useState("");
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push("/");
@@ -22,6 +31,23 @@ export default function Dashboard() {
     setTasks([...tasks, input.trim()]);
     setInput("");
   };
+
+  const generateSchedule = async () => {
+  if (tasks.length === 0) return;
+  setGenerating(true);
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tasks }),
+    });
+    const data = await res.json();
+    setSchedule(data.schedule || []);
+  } catch (e) {
+    console.error(e);
+  }
+  setGenerating(false);
+};
 
   return (
     <main className="min-h-screen bg-black text-white p-8">
@@ -42,22 +68,49 @@ export default function Dashboard() {
           placeholder="Add a task..."
           className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 outline-none focus:border-white/30"
         />
-        <button
-          onClick={addTask}
-          className="bg-white text-black px-5 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
-        >
+        <button onClick={addTask} className="bg-white text-black px-5 py-3 rounded-xl font-semibold hover:bg-gray-200 transition">
           Add
         </button>
       </div>
 
       {/* Task List */}
-      <div className="flex flex-col gap-3 max-w-xl">
+      <div className="flex flex-col gap-3 max-w-xl mb-8">
         {tasks.map((task, i) => (
           <div key={i} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white/80">
             {task}
           </div>
         ))}
       </div>
+
+      {/* Generate Button */}
+      {tasks.length > 0 && (
+        <button
+          onClick={generateSchedule}
+          disabled={generating}
+          className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-200 transition disabled:opacity-50 mb-10"
+        >
+          {generating ? "Generating..." : "⚡ Generate My Day"}
+        </button>
+      )}
+
+      {/* AI Schedule */}
+      {schedule.length > 0 && (
+        <div className="max-w-xl">
+          <h2 className="text-xl font-bold mb-4">Your AI Schedule</h2>
+          <div className="flex flex-col gap-4">
+            {schedule.map((item, i) => (
+              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-semibold">{item.task}</span>
+                  <span className="text-white/40 text-sm">{item.time}</span>
+                </div>
+                <div className="text-white/40 text-sm mb-2">{item.duration}</div>
+                <div className="text-white/60 text-sm">💡 {item.tip}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
