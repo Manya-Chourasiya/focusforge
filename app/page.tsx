@@ -1,3 +1,4 @@
+import AuthButton from "@/components/AuthButton";
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col">
@@ -5,9 +6,7 @@ export default function Home() {
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-5 border-b border-white/10">
         <span className="text-xl font-bold text-white">FocusForge ⚡</span>
-        <button className="bg-white text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-200 transition">
-          Get Started
-        </button>
+        <AuthButton />
       </nav>
 
       {/* Hero Section */}
