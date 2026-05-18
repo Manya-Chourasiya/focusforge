@@ -3,16 +3,20 @@
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { useRouter } from "next/navigation";
 
 export default function AuthButton() {
   const [user] = useAuthState(auth);
+  const router = useRouter();
 
   const login = async () => {
     await signInWithPopup(auth, googleProvider);
+    router.push("/dashboard");
   };
 
   const logout = async () => {
     await signOut(auth);
+    router.push("/");
   };
 
   if (user) {
