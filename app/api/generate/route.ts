@@ -1,11 +1,11 @@
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 export async function POST(req: NextRequest) {
   try {
     const { tasks } = await req.json();
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
@@ -25,8 +25,8 @@ Respond ONLY with valid JSON, no markdown, no extra text:
     const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
     return NextResponse.json(parsed);
-  } catch (error) {
-    console.error("Error:", error);
-    return NextResponse.json({ schedule: [] }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message, schedule: [] }, { status: 500 });
   }
 }
