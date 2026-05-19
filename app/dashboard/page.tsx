@@ -32,22 +32,26 @@ export default function Dashboard() {
     setInput("");
   };
 
+  const deleteTask = (index: number) => {
+    setTasks(tasks.filter((_, i) => i !== index));
+  };
+
   const generateSchedule = async () => {
-  if (tasks.length === 0) return;
-  setGenerating(true);
-  try {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tasks }),
-    });
-    const data = await res.json();
-    setSchedule(data.schedule || []);
-  } catch (e) {
-    console.error(e);
-  }
-  setGenerating(false);
-};
+    if (tasks.length === 0) return;
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks }),
+      });
+      const data = await res.json();
+      setSchedule(data.schedule || []);
+    } catch (e) {
+      console.error(e);
+    }
+    setGenerating(false);
+  };
 
   return (
     <main className="min-h-screen bg-black text-white p-8">
@@ -76,8 +80,14 @@ export default function Dashboard() {
       {/* Task List */}
       <div className="flex flex-col gap-3 max-w-xl mb-8">
         {tasks.map((task, i) => (
-          <div key={i} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white/80">
-            {task}
+          <div key={i} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white/80 flex items-center justify-between">
+            <span>{task}</span>
+            <button
+              onClick={() => deleteTask(i)}
+              className="text-white/30 hover:text-red-400 transition text-lg"
+            >
+              ✕
+            </button>
           </div>
         ))}
       </div>
