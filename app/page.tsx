@@ -24,8 +24,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!loading && !user) router.push("/");
     if (user) loadData();
-  }, [user, loading]);
-
+  }, [user, loading, router]);
+  
   const loadData = async () => {
     if (!user) return;
     const ref = doc(db, "users", user.uid);
