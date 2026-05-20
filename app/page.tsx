@@ -5,6 +5,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
 interface ScheduleItem {
   time: string;
@@ -82,8 +83,16 @@ export default function Dashboard() {
     <main className="min-h-screen bg-black text-white p-8">
       <nav className="flex items-center justify-between mb-12">
         <span className="text-xl font-bold">FocusForge ⚡</span>
-        <span className="text-white/50 text-sm">Hi, {user?.displayName} 👋</span>
-      </nav>
+        <div className="flex items-center gap-4">
+         <span className="text-white/50 text-sm">Hi, {user?.displayName} 👋</span>
+         <button
+          onClick={() => signOut(auth).then(() => router.push("/"))}
+          className="bg-white/10 text-white px-4 py-2 rounded-full text-sm hover:bg-white/20 transition"
+         >
+          Sign out
+        </button>
+       </div>
+     </nav>
 
       <h1 className="text-3xl font-bold mb-2">Your Day</h1>
       <p className="text-white/50 mb-8">Add your tasks and let AI build your schedule.</p>
