@@ -10,6 +10,8 @@ import { signOut } from "firebase/auth";
 interface Task {
   text: string;
   done: boolean;
+  priority: "high" | "medium" | "low";
+  estimate: string;
 }
 
 interface ScheduleItem {
@@ -24,11 +26,14 @@ export default function Dashboard() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState("");
+  const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
+  const [estimate, setEstimate] = useState("");
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [generating, setGenerating] = useState(false);
   const [history, setHistory] = useState<{id: string, date: string, schedule: ScheduleItem[]}[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [motivation, setMotivation] = useState("");
 
   useEffect(() => {
     if (loading) return;
@@ -38,6 +43,21 @@ export default function Dashboard() {
       loadData();
     }
   }, [user, loading, router]);
+
+  // Auto clear completed tasks at midnight
+  useEffect(() => {
+    const now = new Date();
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    const msUntilMidnight = midnight.getTime() - now.getTime();
+    const timer = setTimeout(() => {
+      const newTasks = tasks.map(t => ({ ...t, done: false }));
+      setTasks(newTasks);
+      setSchedule([]);
+      saveData(newTasks, []);
+    }, msUntilMidnight);
+    return () => clearTimeout(timer);
+  }, [tasks]);
 
   const loadData = async () => {
     if (!user) return;
@@ -76,9 +96,11 @@ export default function Dashboard() {
 
   const addTask = () => {
     if (!input.trim()) return;
-    const newTasks = [...tasks, { text: input.trim(), done: false }];
+    const newTasks = [...tasks, { text: input.trim(), done: false, priority, estimate: estimate || "30 mins" }];
     setTasks(newTasks);
     setInput("");
+    setEstimate("");
+    setPriority("medium");
     saveData(newTasks, schedule);
   };
 
@@ -102,6 +124,15 @@ export default function Dashboard() {
     saveData(newTasks, schedule, newStreak);
   };
 
+  const clearDay = async () => {
+    const confirmed = window.confirm("Clear all tasks and schedule?");
+    if (!confirmed) return;
+    setTasks([]);
+    setSchedule([]);
+    setMotivation("");
+    saveData([], []);
+  };
+
   const generateSchedule = async () => {
     if (tasks.length === 0) return;
     setGenerating(true);
@@ -109,11 +140,14 @@ export default function Dashboard() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks: tasks.map(t => t.text) }),
+        body: JSON.stringify({
+          tasks: tasks.map(t => `${t.text} (priority: ${t.priority}, estimate: ${t.estimate})`)
+        }),
       });
       const data = await res.json();
       const newSchedule = data.schedule || [];
       setSchedule(newSchedule);
+      setMotivation(data.motivation || "");
       saveData(tasks, newSchedule);
       const historyRef = collection(db, "users", user!.uid, "history");
       await addDoc(historyRef, {
@@ -125,6 +159,12 @@ export default function Dashboard() {
       console.error(e);
     }
     setGenerating(false);
+  };
+
+  const priorityConfig = {
+    high: { label: "🔴 High", color: "text-red-400 border-red-400/30 bg-red-400/10" },
+    medium: { label: "🟡 Medium", color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" },
+    low: { label: "🟢 Low", color: "text-green-400 border-green-400/30 bg-green-400/10" },
   };
 
   const completedCount = tasks.filter(t => t.done).length;
@@ -159,13 +199,12 @@ export default function Dashboard() {
       <h1 className="text-3xl font-bold mb-2">Your Day</h1>
       <p className="text-white/50 mb-8">Add your tasks and let AI build your schedule.</p>
 
-      {/* Two column layout on desktop, single on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        {/* LEFT COLUMN — Tasks + History */}
+        {/* LEFT COLUMN */}
         <div>
           {/* Task Input */}
-          <div className="flex gap-3 mb-6">
+          <div className="flex gap-3 mb-3">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -176,6 +215,25 @@ export default function Dashboard() {
             <button onClick={addTask} className="bg-white text-black px-5 py-3 rounded-xl font-semibold hover:bg-gray-200 transition">
               Add
             </button>
+          </div>
+
+          {/* Priority + Estimate */}
+          <div className="flex gap-3 mb-6">
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as "high" | "medium" | "low")}
+              className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-sm outline-none"
+            >
+              <option value="high">🔴 High</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+            <input
+              value={estimate}
+              onChange={(e) => setEstimate(e.target.value)}
+              placeholder="Time estimate (e.g. 1 hour)"
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-sm placeholder-white/30 outline-none focus:border-white/30"
+            />
           </div>
 
           {/* Progress Bar */}
@@ -195,33 +253,51 @@ export default function Dashboard() {
           )}
 
           {/* Task List */}
-          <div className="flex flex-col gap-3 mb-8">
+          <div className="flex flex-col gap-3 mb-6">
             {tasks.map((task, i) => (
               <div key={i} className={`border rounded-xl px-4 py-3 flex items-center justify-between transition ${task.done ? "bg-white/5 border-white/5 opacity-50" : "bg-white/5 border-white/10"}`}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                   <button
                     onClick={() => toggleTask(i)}
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${task.done ? "bg-white border-white" : "border-white/30 hover:border-white/60"}`}
+                    className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${task.done ? "bg-white border-white" : "border-white/30 hover:border-white/60"}`}
                   >
                     {task.done && <span className="text-black text-xs">✓</span>}
                   </button>
-                  <span className={task.done ? "line-through text-white/40" : "text-white/80"}>{task.text}</span>
+                  <div className="flex flex-col">
+                    <span className={task.done ? "line-through text-white/40 text-sm" : "text-white/80 text-sm"}>{task.text}</span>
+                    <div className="flex gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityConfig[task.priority]?.color || priorityConfig.medium.color}`}>
+                        {priorityConfig[task.priority]?.label || "🟡 Medium"}
+                      </span>
+                      <span className="text-xs text-white/30">⏱ {task.estimate}</span>
+                    </div>
+                  </div>
                 </div>
-                <button onClick={() => deleteTask(i)} className="text-white/30 hover:text-red-400 transition text-lg">✕</button>
+                <button onClick={() => deleteTask(i)} className="text-white/30 hover:text-red-400 transition text-lg ml-2">✕</button>
               </div>
             ))}
           </div>
 
-          {/* Generate Button */}
-          {tasks.length > 0 && (
-            <button
-              onClick={generateSchedule}
-              disabled={generating}
-              className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-200 transition disabled:opacity-50 mb-8"
-            >
-              {generating ? "Generating..." : "⚡ Generate My Day"}
-            </button>
-          )}
+          {/* Buttons */}
+          <div className="flex gap-3 mb-8 flex-wrap">
+            {tasks.length > 0 && (
+              <>
+                <button
+                  onClick={generateSchedule}
+                  disabled={generating}
+                  className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-200 transition disabled:opacity-50"
+                >
+                  {generating ? "Generating..." : "⚡ Generate My Day"}
+                </button>
+                <button
+                  onClick={clearDay}
+                  className="bg-white/10 text-white/60 px-6 py-3 rounded-xl text-sm hover:bg-red-500/20 hover:text-red-400 transition"
+                >
+                  🗑 Clear Day
+                </button>
+              </>
+            )}
+          </div>
 
           {/* History Section */}
           <div>
@@ -257,8 +333,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN — Schedule only */}
+        {/* RIGHT COLUMN — Schedule */}
         <div>
+          {motivation && (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-6">
+              <p className="text-white/60 text-sm italic">💬 {motivation}</p>
+            </div>
+          )}
           {schedule.length > 0 && (
             <>
               <h2 className="text-xl font-bold mb-4">Your AI Schedule</h2>

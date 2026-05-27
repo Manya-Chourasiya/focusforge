@@ -4,9 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { tasks } = await req.json();
-
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
@@ -16,11 +14,10 @@ export async function POST(req: NextRequest) {
 ${tasks.map((t: string, i: number) => `${i + 1}. ${t}`).join("\n")}
 
 Respond ONLY with valid JSON, no markdown, no extra text:
-{"schedule":[{"time":"9:00 AM","task":"task name","duration":"30 mins","tip":"short tip"}]}`,
+{"motivation":"one short motivational sentence for the day","schedule":[{"time":"9:00 AM","task":"task name","duration":"30 mins","tip":"short tip"}]}`,
         },
       ],
     });
-
     const text = completion.choices[0]?.message?.content || "";
     const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
