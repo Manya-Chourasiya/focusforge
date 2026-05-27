@@ -115,16 +115,17 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen bg-black text-white p-8">
       <nav className="flex items-center justify-between mb-12">
-        <span className="text-xl font-bold">FocusForge ⚡</span>
-        <div className="flex items-center gap-4">
-          <span className="text-white/50 text-sm">Hi, {user?.displayName} 👋</span>
-          <button
-            onClick={handleSignOut}
-            className="bg-white/10 text-white px-4 py-2 rounded-full text-sm hover:bg-white/20 transition"
-          >
-            Sign out
-          </button>
-        </div>
+       <span className="text-xl font-bold">FocusForge ⚡</span>
+       <button
+         onClick={async () => {
+          await signOut(auth);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          window.location.href = "/";
+        }}
+        className="bg-white/10 text-white px-4 py-2 rounded-full text-sm hover:bg-white/20 transition"
+      >
+        Sign out
+      </button>
       </nav>
 
       <h1 className="text-3xl font-bold mb-2">Your Day</h1>
