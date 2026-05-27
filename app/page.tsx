@@ -37,9 +37,6 @@ export default function Home() {
         <p className="text-white/60 text-lg max-w-xl">
           FocusForge turns your messy to-do list into a smart daily schedule — powered by AI.
         </p>
-        <button className="bg-white text-black px-8 py-3 rounded-full font-semibold text-base hover:bg-gray-200 transition">
-          Try it free →
-        </button>
       </section>
 
       {/* Features Section */}
