@@ -4,7 +4,7 @@ import { auth, db } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, addDoc, getDocs, orderBy, query } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
 interface ScheduleItem {
@@ -21,15 +21,28 @@ export default function Dashboard() {
   const [input, setInput] = useState("");
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [history, setHistory] = useState<{id: string, date: string, schedule: ScheduleItem[]}[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
-  const loadData = async (uid: string) => {
-    const ref = doc(db, "users", uid);
+  const loadData = async () => {
+    if (!user) return;
+    const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
     if (snap.exists()) {
       const data = snap.data();
       setTasks(data.tasks || []);
       setSchedule(data.schedule || []);
     }
+
+    const historyRef = collection(db, "users", user.uid, "history");
+    const historyQuery = query(historyRef, orderBy("date", "desc"));
+    const historySnap = await getDocs(historyQuery);
+    const historyData = historySnap.docs.map(d => ({
+      id: d.id,
+      date: d.data().date,
+      schedule: d.data().schedule,
+    }));
+    setHistory(historyData);
   };
 
   useEffect(() => {
@@ -74,6 +87,12 @@ export default function Dashboard() {
       const newSchedule = data.schedule || [];
       setSchedule(newSchedule);
       saveData(tasks, newSchedule);
+      const historyRef = collection(db, "users", user!.uid, "history");
+      await addDoc(historyRef, {
+       date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+       schedule: newSchedule,
+      });
+      await loadData();
     } catch (e) {
       console.error(e);
     }
@@ -168,6 +187,40 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* History Section */}
+<div className="max-w-xl mt-12">
+  <button
+    onClick={() => setShowHistory(!showHistory)}
+    className="text-white/40 text-sm hover:text-white/70 transition mb-4"
+  >
+    {showHistory ? "▲ Hide history" : "▼ Show past schedules"}
+  </button>
+
+  {showHistory && (
+    <div className="flex flex-col gap-6">
+      {history.length === 0 && (
+        <p className="text-white/30 text-sm">No past schedules yet.</p>
+      )}
+      {history.map((item) => (
+        <div key={item.id} className="border border-white/10 rounded-2xl p-5">
+          <p className="text-white/40 text-sm mb-4">📅 {item.date}</p>
+          <div className="flex flex-col gap-3">
+            {item.schedule.map((s, i) => (
+              <div key={i} className="bg-white/5 rounded-xl p-4">
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium text-sm">{s.task}</span>
+                  <span className="text-white/40 text-xs">{s.time}</span>
+                </div>
+                <div className="text-white/40 text-xs">{s.duration}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
     </main>
   );
 }
