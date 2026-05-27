@@ -50,9 +50,9 @@ export default function Dashboard() {
     if (!user) {
       router.push("/");
     } else {
-      loadData(user.uid);
+      loadData();
     }
-  }, [user, loading]);
+  }, [user, loading, router]);
 
   const saveData = async (newTasks: string[], newSchedule: ScheduleItem[]) => {
     if (!user) return;
