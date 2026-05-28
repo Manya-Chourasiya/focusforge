@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { doc, setDoc, getDoc, collection, addDoc, getDocs, orderBy, query } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import jsPDF from "jspdf";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface Task {
   text: string;
@@ -69,7 +70,6 @@ export default function Dashboard() {
       setSchedule(data.schedule || []);
       setStreak(data.streak || 0);
     }
-
     const historyRef = collection(db, "users", user.uid, "history");
     const historyQuery = query(historyRef, orderBy("date", "desc"));
     const historySnap = await getDocs(historyQuery);
@@ -92,7 +92,11 @@ export default function Dashboard() {
     });
   };
 
-  if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)", color: "var(--text)" }}>
+      Loading...
+    </div>
+  );
 
   const addTask = () => {
     if (!input.trim()) return;
@@ -135,8 +139,6 @@ export default function Dashboard() {
 
   const exportPDF = () => {
     const pdf = new jsPDF();
-
-    // Header
     pdf.setFillColor(0, 0, 0);
     pdf.rect(0, 0, 210, 40, "F");
     pdf.setTextColor(255, 255, 255);
@@ -146,28 +148,19 @@ export default function Dashboard() {
     pdf.setTextColor(180, 180, 180);
     pdf.text("AI-Powered Daily Schedule", 20, 26);
     pdf.text(new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }), 20, 34);
-
     let y = 55;
-
-    // Motivation
     if (motivation) {
       pdf.setFontSize(10);
       pdf.setTextColor(100, 100, 100);
       pdf.text(`"${motivation}"`, 20, y);
       y += 12;
     }
-
-    // Schedule
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
     pdf.text("Your AI Schedule", 20, y);
     y += 8;
-
     schedule.forEach((item) => {
-      if (y > 270) {
-        pdf.addPage();
-        y = 20;
-      }
+      if (y > 270) { pdf.addPage(); y = 20; }
       pdf.setDrawColor(230, 230, 230);
       pdf.setFillColor(248, 248, 248);
       pdf.roundedRect(15, y, 180, 22, 3, 3, "FD");
@@ -176,31 +169,21 @@ export default function Dashboard() {
       pdf.text(`${item.time} — ${item.task}`, 20, y + 8);
       pdf.setFontSize(8);
       pdf.setTextColor(120, 120, 120);
-      // Fixed: replaced 💡 emoji with plain "Tip:" text
       pdf.text(`${item.duration}  |  Tip: ${item.tip}`, 20, y + 16);
       y += 28;
     });
-
-    // Tasks
     y += 5;
     pdf.setFontSize(14);
     pdf.setTextColor(0, 0, 0);
     pdf.text("Tasks", 20, y);
     y += 8;
-
     tasks.forEach((task) => {
-      if (y > 270) {
-        pdf.addPage();
-        y = 20;
-      }
-      // Fixed: replaced ✓/○ with [x]/[ ] and removed priority color emojis
-      const priorityLabel = task.priority === "high" ? "high" : task.priority === "medium" ? "medium" : "low";
+      if (y > 270) { pdf.addPage(); y = 20; }
       pdf.setFontSize(10);
       pdf.setTextColor(task.done ? 150 : 0, task.done ? 150 : 0, task.done ? 150 : 0);
-      pdf.text(`${task.done ? "[x]" : "[ ]"} ${task.text} (${priorityLabel} priority · ${task.estimate})`, 20, y);
+      pdf.text(`${task.done ? "[x]" : "[ ]"} ${task.text} (${task.priority} priority · ${task.estimate})`, 20, y);
       y += 8;
     });
-
     pdf.save("focusforge-schedule.pdf");
   };
 
@@ -242,25 +225,25 @@ export default function Dashboard() {
   const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
 
   return (
-    <main className="min-h-screen bg-black text-white p-8">
-
-      {/* Navbar */}
+    <main className="min-h-screen p-8" style={{ background: "var(--bg)", color: "var(--text)" }}>
       <nav className="flex items-center justify-between mb-12">
         <div className="flex flex-col">
           <span className="text-xl font-bold">FocusForge ⚡</span>
-          <span className="text-white/40 text-xs">Hi, {user?.displayName} 👋</span>
+          <span className="text-sm" style={{ color: "var(--text-muted)" }}>Hi, {user?.displayName} 👋</span>
         </div>
         <div className="flex items-center gap-3">
           {streak > 0 && (
             <span className="text-orange-400 text-sm font-semibold">🔥 {streak} day streak</span>
           )}
+          <ThemeToggle />
           <button
             onClick={async () => {
               await signOut(auth);
               await new Promise(resolve => setTimeout(resolve, 500));
               window.location.href = "/";
             }}
-            className="bg-white/10 text-white px-4 py-2 rounded-full text-sm hover:bg-white/20 transition"
+            className="px-4 py-2 rounded-full text-sm transition"
+            style={{ background: "var(--bg-secondary)", color: "var(--text)" }}
           >
             Sign out
           </button>
@@ -268,32 +251,42 @@ export default function Dashboard() {
       </nav>
 
       <h1 className="text-3xl font-bold mb-2">Your Day</h1>
-      <p className="text-white/50 mb-8">Add your tasks and let AI build your schedule.</p>
+      <p className="mb-8" style={{ color: "var(--text-muted)" }}>Add your tasks and let AI build your schedule.</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        {/* LEFT COLUMN */}
         <div>
-          {/* Task Input */}
           <div className="flex gap-3 mb-3">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addTask()}
               placeholder="Add a task..."
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 outline-none focus:border-white/30"
+              className="flex-1 rounded-xl px-4 py-3 outline-none transition"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
+              }}
             />
-            <button onClick={addTask} className="bg-white text-black px-5 py-3 rounded-xl font-semibold hover:bg-gray-200 transition">
+            <button
+              onClick={addTask}
+              className="px-5 py-3 rounded-xl font-semibold transition"
+              style={{ background: "var(--text)", color: "var(--bg)" }}
+            >
               Add
             </button>
           </div>
 
-          {/* Priority + Estimate */}
           <div className="flex gap-3 mb-6">
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as "high" | "medium" | "low")}
-              className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-sm outline-none"
+              className="rounded-xl px-3 py-2 text-sm outline-none"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                color: "var(--text-muted)",
+              }}
             >
               <option value="high">🔴 High</option>
               <option value="medium">🟡 Medium</option>
@@ -303,73 +296,104 @@ export default function Dashboard() {
               value={estimate}
               onChange={(e) => setEstimate(e.target.value)}
               placeholder="Time estimate (e.g. 1 hour)"
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-sm placeholder-white/30 outline-none focus:border-white/30"
+              className="flex-1 rounded-xl px-3 py-2 text-sm outline-none transition"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                color: "var(--text-muted)",
+              }}
             />
           </div>
 
-          {/* Progress Bar */}
           {tasks.length > 0 && (
             <div className="mb-6">
-              <div className="flex justify-between text-sm text-white/40 mb-2">
+              <div className="flex justify-between text-sm mb-2" style={{ color: "var(--text-muted)" }}>
                 <span>{completedCount}/{tasks.length} tasks done</span>
                 <span>{progress}%</span>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-2">
+              <div className="w-full rounded-full h-2" style={{ background: "var(--bg-secondary)" }}>
                 <div
-                  className="bg-white rounded-full h-2 transition-all duration-500"
-                  style={{ width: `${progress}%` }}
+                  className="rounded-full h-2 transition-all duration-500"
+                  style={{ width: `${progress}%`, background: "var(--text)" }}
                 />
               </div>
             </div>
           )}
 
-          {/* Task List */}
           <div className="flex flex-col gap-3 mb-6">
             {tasks.map((task, i) => (
-              <div key={i} className={`border rounded-xl px-4 py-3 flex items-center justify-between transition ${task.done ? "bg-white/5 border-white/5 opacity-50" : "bg-white/5 border-white/10"}`}>
+              <div
+                key={i}
+                className="rounded-xl px-4 py-3 flex items-center justify-between transition"
+                style={{
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
+                  opacity: task.done ? 0.5 : 1,
+                }}
+              >
                 <div className="flex items-center gap-3 flex-1">
                   <button
                     onClick={() => toggleTask(i)}
-                    className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${task.done ? "bg-white border-white" : "border-white/30 hover:border-white/60"}`}
+                    className="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition"
+                    style={{
+                      background: task.done ? "var(--text)" : "transparent",
+                      borderColor: task.done ? "var(--text)" : "var(--border)",
+                    }}
                   >
-                    {task.done && <span className="text-black text-xs">✓</span>}
+                    {task.done && <span className="text-xs" style={{ color: "var(--bg)" }}>✓</span>}
                   </button>
                   <div className="flex flex-col">
-                    <span className={task.done ? "line-through text-white/40 text-sm" : "text-white/80 text-sm"}>{task.text}</span>
+                    <span
+                      className="text-sm"
+                      style={{
+                        color: task.done ? "var(--text-muted)" : "var(--text)",
+                        textDecoration: task.done ? "line-through" : "none",
+                      }}
+                    >
+                      {task.text}
+                    </span>
                     <div className="flex gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityConfig[task.priority]?.color || priorityConfig.medium.color}`}>
                         {priorityConfig[task.priority]?.label || "🟡 Medium"}
                       </span>
-                      <span className="text-xs text-white/30">⏱ {task.estimate}</span>
+                      <span className="text-xs" style={{ color: "var(--text-muted)" }}>⏱ {task.estimate}</span>
                     </div>
                   </div>
                 </div>
-                <button onClick={() => deleteTask(i)} className="text-white/30 hover:text-red-400 transition text-lg ml-2">✕</button>
+                <button
+                  onClick={() => deleteTask(i)}
+                  className="text-lg ml-2 transition hover:text-red-400"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-3 mb-8 flex-wrap">
             {tasks.length > 0 && (
               <>
                 <button
                   onClick={generateSchedule}
                   disabled={generating}
-                  className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-200 transition disabled:opacity-50"
+                  className="px-8 py-3 rounded-xl font-semibold transition disabled:opacity-50"
+                  style={{ background: "var(--text)", color: "var(--bg)" }}
                 >
                   {generating ? "Generating..." : "⚡ Generate My Day"}
                 </button>
                 <button
                   onClick={clearDay}
-                  className="bg-white/10 text-white/60 px-6 py-3 rounded-xl text-sm hover:bg-red-500/20 hover:text-red-400 transition"
+                  className="px-6 py-3 rounded-xl text-sm transition hover:text-red-400"
+                  style={{ background: "var(--bg-secondary)", color: "var(--text-muted)" }}
                 >
                   🗑 Clear Day
                 </button>
                 {schedule.length > 0 && (
                   <button
                     onClick={exportPDF}
-                    className="bg-white/10 text-white/60 px-6 py-3 rounded-xl text-sm hover:bg-blue-500/20 hover:text-blue-400 transition"
+                    className="px-6 py-3 rounded-xl text-sm transition hover:text-blue-400"
+                    style={{ background: "var(--bg-secondary)", color: "var(--text-muted)" }}
                   >
                     📄 Export PDF
                   </button>
@@ -378,30 +402,38 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* History Section */}
           <div>
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="text-white/40 text-sm hover:text-white/70 transition mb-4"
+              className="text-sm transition mb-4 hover:opacity-80"
+              style={{ color: "var(--text-muted)" }}
             >
               {showHistory ? "▲ Hide history" : "▼ Show past schedules"}
             </button>
             {showHistory && (
               <div className="flex flex-col gap-6">
                 {history.length === 0 && (
-                  <p className="text-white/30 text-sm">No past schedules yet.</p>
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>No past schedules yet.</p>
                 )}
                 {history.map((item) => (
-                  <div key={item.id} className="border border-white/10 rounded-2xl p-5">
-                    <p className="text-white/40 text-sm mb-4">📅 {item.date}</p>
+                  <div
+                    key={item.id}
+                    className="rounded-2xl p-5"
+                    style={{ border: "1px solid var(--border)" }}
+                  >
+                    <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>📅 {item.date}</p>
                     <div className="flex flex-col gap-3">
                       {item.schedule.map((s, i) => (
-                        <div key={i} className="bg-white/5 rounded-xl p-4">
+                        <div
+                          key={i}
+                          className="rounded-xl p-4"
+                          style={{ background: "var(--card)" }}
+                        >
                           <div className="flex justify-between mb-1">
-                            <span className="font-medium text-sm">{s.task}</span>
-                            <span className="text-white/40 text-xs">{s.time}</span>
+                            <span className="font-medium text-sm" style={{ color: "var(--text)" }}>{s.task}</span>
+                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{s.time}</span>
                           </div>
-                          <div className="text-white/40 text-xs">{s.duration}</div>
+                          <div className="text-xs" style={{ color: "var(--text-muted)" }}>{s.duration}</div>
                         </div>
                       ))}
                     </div>
@@ -412,32 +444,37 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN — Schedule */}
         <div>
           {motivation && (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-6">
-              <p className="text-white/60 text-sm italic">💬 {motivation}</p>
+            <div
+              className="rounded-2xl p-5 mb-6"
+              style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+            >
+              <p className="text-sm italic" style={{ color: "var(--text-muted)" }}>💬 {motivation}</p>
             </div>
           )}
           {schedule.length > 0 && (
             <>
-              <h2 className="text-xl font-bold mb-4">Your AI Schedule</h2>
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>Your AI Schedule</h2>
               <div className="flex flex-col gap-4">
                 {schedule.map((item, i) => (
-                  <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <div
+                    key={i}
+                    className="rounded-2xl p-5"
+                    style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+                  >
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold">{item.task}</span>
-                      <span className="text-white/40 text-sm">{item.time}</span>
+                      <span className="font-semibold" style={{ color: "var(--text)" }}>{item.task}</span>
+                      <span className="text-sm" style={{ color: "var(--text-muted)" }}>{item.time}</span>
                     </div>
-                    <div className="text-white/40 text-sm mb-2">{item.duration}</div>
-                    <div className="text-white/60 text-sm">💡 {item.tip}</div>
+                    <div className="text-sm mb-2" style={{ color: "var(--text-muted)" }}>{item.duration}</div>
+                    <div className="text-sm" style={{ color: "var(--text-muted)" }}>💡 {item.tip}</div>
                   </div>
                 ))}
               </div>
             </>
           )}
         </div>
-
       </div>
     </main>
   );
