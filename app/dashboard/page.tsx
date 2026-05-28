@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { doc, setDoc, getDoc, collection, addDoc, getDocs, orderBy, query } from "firebase/firestore";
 import { signOut } from "firebase/auth";
+import jsPDF from "jspdf";
 
 interface Task {
   text: string;
@@ -44,7 +45,6 @@ export default function Dashboard() {
     }
   }, [user, loading, router]);
 
-  // Auto clear completed tasks at midnight
   useEffect(() => {
     const now = new Date();
     const midnight = new Date();
@@ -131,6 +131,77 @@ export default function Dashboard() {
     setSchedule([]);
     setMotivation("");
     saveData([], []);
+  };
+
+  const exportPDF = () => {
+    const pdf = new jsPDF();
+
+    // Header
+    pdf.setFillColor(0, 0, 0);
+    pdf.rect(0, 0, 210, 40, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(22);
+    pdf.text("FocusForge", 20, 18);
+    pdf.setFontSize(10);
+    pdf.setTextColor(180, 180, 180);
+    pdf.text("AI-Powered Daily Schedule", 20, 26);
+    pdf.text(new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }), 20, 34);
+
+    let y = 55;
+
+    // Motivation
+    if (motivation) {
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`"${motivation}"`, 20, y);
+      y += 12;
+    }
+
+    // Schedule
+    pdf.setFontSize(14);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Your AI Schedule", 20, y);
+    y += 8;
+
+    schedule.forEach((item) => {
+      if (y > 270) {
+        pdf.addPage();
+        y = 20;
+      }
+      pdf.setDrawColor(230, 230, 230);
+      pdf.setFillColor(248, 248, 248);
+      pdf.roundedRect(15, y, 180, 22, 3, 3, "FD");
+      pdf.setFontSize(11);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`${item.time} — ${item.task}`, 20, y + 8);
+      pdf.setFontSize(8);
+      pdf.setTextColor(120, 120, 120);
+      // Fixed: replaced 💡 emoji with plain "Tip:" text
+      pdf.text(`${item.duration}  |  Tip: ${item.tip}`, 20, y + 16);
+      y += 28;
+    });
+
+    // Tasks
+    y += 5;
+    pdf.setFontSize(14);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Tasks", 20, y);
+    y += 8;
+
+    tasks.forEach((task) => {
+      if (y > 270) {
+        pdf.addPage();
+        y = 20;
+      }
+      // Fixed: replaced ✓/○ with [x]/[ ] and removed priority color emojis
+      const priorityLabel = task.priority === "high" ? "high" : task.priority === "medium" ? "medium" : "low";
+      pdf.setFontSize(10);
+      pdf.setTextColor(task.done ? 150 : 0, task.done ? 150 : 0, task.done ? 150 : 0);
+      pdf.text(`${task.done ? "[x]" : "[ ]"} ${task.text} (${priorityLabel} priority · ${task.estimate})`, 20, y);
+      y += 8;
+    });
+
+    pdf.save("focusforge-schedule.pdf");
   };
 
   const generateSchedule = async () => {
@@ -295,6 +366,14 @@ export default function Dashboard() {
                 >
                   🗑 Clear Day
                 </button>
+                {schedule.length > 0 && (
+                  <button
+                    onClick={exportPDF}
+                    className="bg-white/10 text-white/60 px-6 py-3 rounded-xl text-sm hover:bg-blue-500/20 hover:text-blue-400 transition"
+                  >
+                    📄 Export PDF
+                  </button>
+                )}
               </>
             )}
           </div>
