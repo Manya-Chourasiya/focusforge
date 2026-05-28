@@ -14,10 +14,17 @@ FocusForge lets you add your tasks for the day and uses AI to generate a priorit
 
 - 🔐 Google login via Firebase Auth
 - ✅ Add, complete and delete tasks
+- 🔴 Task priority labels (High / Medium / Low)
+- ⏱ Time estimates per task
 - ⚡ AI-generated daily schedule (powered by Groq + LLaMA 3)
+- 💬 AI motivational message with each schedule
 - 📊 Progress bar and streak counter
 - 📅 Schedule history — view past plans
+- 📄 Export schedule as PDF
+- 🗑 Clear Day button
+- 🔄 Auto-reset tasks at midnight
 - 💾 Data persists across sessions via Firestore
+- 🌙 Light / Dark theme toggle
 - 📱 Mobile responsive
 
 ## Tech Stack
@@ -40,6 +47,7 @@ npm install
 ```
 
 Create a `.env.local` file with:
+
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
