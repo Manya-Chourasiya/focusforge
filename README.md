@@ -67,4 +67,4 @@ npm run dev
 ## Author
 
 **Manya Chourasiya** — B.Tech CSE, Avantika University  
-[LinkedIn](https://linkedin.com/in/manya-chourasiya) · [GitHub](https://github.com/Manya-Chourasiya)
+[LinkedIn](https://www.linkedin.com/in/manya-chourasiya-542b6a329/) · [GitHub](https://github.com/Manya-Chourasiya)
